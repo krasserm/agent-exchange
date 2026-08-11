@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="agent-exchange enables terminal-based agents, currently Claude Code and Codex, to exchange messages through the asn command-line interface."
+    />
+    <meta property="og:title" content="agent-exchange" />
+    <meta
+      property="og:description"
+      content="A toolkit for inter-agent messaging and coordination."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/krasserm/agent-exchange/main/docs/assets/agent-session-web-annotated.png"
+    />
+    <title>agent-exchange: a toolkit for inter-agent messaging and coordination</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1a1a1e;
+        --muted: #63636b;
+        --line: #e8e8ea;
+        --code-bg: #f4f4f6;
+        --accent: #3056d3;
+        --term-bg: #17171c;
+        --term-line: #27272f;
+        --term-fg: #d6d6dc;
+        --term-muted: #80808a;
+        --term-blue: #8aa9ff;
+        --term-green: #85d0a2;
+        --accent-contrast: #ffffff;
+        --green: #188a4e;
+        --amber: #a86a0c;
+        --sans: "Geist", ui-sans-serif, -apple-system, "Segoe UI", Helvetica,
+          Arial, sans-serif;
+        --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
+          monospace;
+        --prose: 42rem;
+        --break: 66rem;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #131318;
+          --fg: #e7e7ec;
+          --muted: #a0a0ac;
+          --line: #26262f;
+          --code-bg: #1e1e27;
+          --accent: #8ab4ff;
+          --accent-contrast: #131318;
+          --green: #93d7a5;
+          --amber: #f0c674;
+          --term-bg: #1b1b23;
+          --term-line: #2b2b36;
+        }
+      }
+
+      ::selection {
+        background: color-mix(in srgb, var(--accent) 28%, transparent);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+
+      main {
+        padding-bottom: 6rem;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--sans);
+        font-size: 1.0625rem;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+        text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+      }
+
+      a:hover {
+        text-decoration-color: var(--accent);
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+        border-radius: 3px;
+      }
+
+      code {
+        font-family: var(--mono);
+        font-size: 0.85em;
+        background: var(--code-bg);
+        border-radius: 4px;
+        padding: 0.1em 0.35em;
+      }
+
+      .prose {
+        width: min(calc(100% - 3rem), var(--prose));
+        margin-inline: auto;
+      }
+
+      .prose p {
+        margin: 0 0 1.25rem;
+      }
+
+      /* ---------- hero ---------- */
+
+      .hero {
+        padding-block: 2.75rem 0;
+      }
+
+      .hero .prose .wordmark {
+        font-family: var(--mono);
+        font-size: 1.4rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin: 0 0 3rem;
+      }
+
+      .hero h1 {
+        font-size: clamp(2rem, 4.5vw, 2.75rem);
+        font-weight: 600;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        margin: 0 0 1.25rem;
+        text-wrap: balance;
+      }
+
+      .flow {
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin: 0 0 1.75rem;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      .flow .co {
+        color: var(--amber);
+      }
+
+      .flow .ga {
+        color: var(--green);
+      }
+
+      .flow .gb {
+        color: var(--accent);
+      }
+
+      .flow .sep {
+        color: var(--muted);
+        opacity: 0.75;
+        margin-left: 0.35rem;
+      }
+
+      .hero .actions {
+        margin-top: 2rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .hero .actions a {
+        display: inline-block;
+        text-decoration: none;
+        padding: 0.55rem 1.05rem;
+        border-radius: 6px;
+        background: var(--accent);
+        color: var(--accent-contrast);
+      }
+
+      .hero .actions a:hover {
+        opacity: 0.88;
+      }
+
+      /* ---------- example ---------- */
+
+      .demo ul {
+        margin: 0 0 1.25rem;
+        padding-left: 1.3rem;
+      }
+
+      .demo li {
+        margin-bottom: 0.35rem;
+      }
+
+      .demo li::marker {
+        color: var(--muted);
+      }
+
+      .term {
+        background: var(--term-bg);
+        border: 1px solid var(--term-line);
+        border-radius: 8px;
+        margin: 1.75rem 0;
+      }
+
+      .term pre {
+        margin: 0;
+        padding: 1.15rem 1.3rem;
+        overflow-x: auto;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        line-height: 1.75;
+        color: var(--term-fg);
+      }
+
+      .term .tmux {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.32rem 1rem;
+        border-top: 1px solid var(--term-line);
+        background: rgba(133, 208, 162, 0.06);
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        color: var(--term-green);
+        overflow: hidden;
+        white-space: nowrap;
+      }
+
+      .term .p {
+        color: var(--term-blue);
+      }
+
+      .term .k {
+        color: var(--term-green);
+      }
+
+      .term .dim {
+        color: var(--term-muted);
+      }
+
+      .term .cursor {
+        display: inline-block;
+        width: 0.55em;
+        height: 1.1em;
+        vertical-align: text-bottom;
+        background: var(--term-fg);
+      }
+
+      .term.copyable {
+        position: relative;
+      }
+
+      .term .copy {
+        position: absolute;
+        top: 0.55rem;
+        right: 0.55rem;
+        display: grid;
+        place-items: center;
+        width: 1.9rem;
+        height: 1.9rem;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--term-muted);
+        cursor: pointer;
+      }
+
+      .term .copy:hover {
+        color: var(--term-fg);
+      }
+
+      .term .copy .check {
+        display: none;
+      }
+
+      .term .copy.done .check {
+        display: block;
+        color: var(--term-green);
+      }
+
+      .term .copy.done .clip {
+        display: none;
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .term .cursor {
+          animation: blink 1.1s steps(1) infinite;
+        }
+
+        @keyframes blink {
+          50% {
+            opacity: 0;
+          }
+        }
+      }
+
+      .shot {
+        margin: 2.25rem auto 0;
+        width: min(calc(100% - 3rem), var(--prose));
+      }
+
+      .shot a {
+        display: block;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--term-bg);
+      }
+
+      .shot img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .shot figcaption {
+        margin-top: 0.8rem;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+
+      /* ---------- sections ---------- */
+
+      section {
+        padding-block: 4rem 0;
+        scroll-margin-top: 2rem;
+      }
+
+      h2 {
+        font-size: 1.375rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: 0 0 1.25rem;
+      }
+
+      h2::before {
+        content: "## ";
+        font-family: var(--mono);
+        font-weight: 400;
+        color: var(--green);
+      }
+
+      /* ---------- principles ---------- */
+
+      .principles {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem 3rem;
+        margin-top: 1.75rem;
+      }
+
+      @media (max-width: 40rem) {
+        .principles {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .principles p {
+        margin: 0;
+        font-size: 0.9375rem;
+        line-height: 1.65;
+        color: var(--muted);
+      }
+
+      .principles strong {
+        color: var(--fg);
+        font-weight: 600;
+      }
+
+      /* ---------- projects ---------- */
+
+      .dir a {
+        display: grid;
+        grid-template-columns: 13rem 1fr;
+        gap: 2rem;
+        align-items: baseline;
+        padding-block: 0.9rem;
+        border-top: 1px solid var(--line);
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .dir a:last-child {
+        border-bottom: 1px solid var(--line);
+      }
+
+      @media (max-width: 40rem) {
+        .dir a {
+          grid-template-columns: 1fr;
+          gap: 0.2rem;
+        }
+      }
+
+      .dir .name {
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--fg);
+        white-space: nowrap;
+      }
+
+      .dir a:hover .name {
+        color: var(--accent);
+      }
+
+      .dir .core {
+        font-family: var(--mono);
+        font-size: 0.65rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0.05rem 0.5rem;
+        margin-left: 0.5rem;
+      }
+
+      .dir .desc {
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+
+      .dir-note {
+        margin-top: 1.25rem;
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="hero">
+        <div class="prose">
+          <p class="wordmark">agent-exchange</p>
+          <h1>A toolkit for inter&#8209;agent messaging and coordination</h1>
+          <p class="flow"><span class="co">humans</span> ⇄ <span class="ga">agents</span> ⇄ <span class="gb">agents</span> <span class="sep">· local | ssh | containers</span></p>
+          <p>
+            <code>agent-exchange</code> enables supported terminal-based agents,
+            currently Claude Code and Codex, to exchange messages through the
+            <code>asn</code> command-line interface. It provides two doors into
+            each session: a generic CLI for sending and receiving messages
+            programmatically, and the agent's native terminal UI for direct
+            human interaction. Sessions can run locally, remotely, or in
+            containers.
+          </p>
+          <p>
+            A human typically gives a goal to a coordinator, which uses
+            <code>asn</code> to organize other agent sessions. Coordinators and
+            sub-coordinators are ordinary agent sessions given that role; there
+            is no hidden orchestration engine. Worker sessions can communicate
+            directly with peers. Humans can observe, guide, or take over any
+            participant's session at any time.
+          </p>
+          <div class="term copyable">
+            <pre><span class="p">$</span> curl -fsSL https://krasserm.github.io/agent-exchange/setup.md</pre>
+            <button
+              class="copy"
+              type="button"
+              aria-label="Copy command"
+              data-cmd="curl -fsSL https://krasserm.github.io/agent-exchange/setup.md"
+            >
+              <svg class="clip" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" />
+                <path d="M10.5 5.5v-3a1.5 1.5 0 0 0-1.5-1.5h-6A1.5 1.5 0 0 0 1.5 2.5v6A1.5 1.5 0 0 0 3 10h2.5" fill="none" transform="translate(0 .5)" />
+              </svg>
+              <svg class="check" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M2.5 8.5 6.5 12.5 13.5 4" />
+              </svg>
+            </button>
+            <div class="tmux" aria-hidden="true">
+              <span>setup</span>
+            </div>
+          </div>
+          <div class="actions">
+            <a href="https://github.com/krasserm/agent-exchange">View on GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <section class="demo">
+        <div class="prose">
+          <h2>Example</h2>
+          <p>
+            Start with a request to a coordinator, an ordinary agent session
+            that coordinates when the request calls for it. This one runs in
+            the agent-dispatch directory:
+          </p>
+          <div class="term">
+            <pre><span class="p">$</span> asn start ~/agent-exchange/agent-dispatch
+<span class="dim">session</span> <span class="k">d17a4e</span> <span class="dim">· tmux asn-d17a4e</span>
+<span class="p">$</span> asn send <span class="k">d17a4e</span> "In ~/scratchpad/agent-a locally and
+  ~/scratchpad/agent-b on my mac mini, let a claude and a
+  codex session exchange a hello message and a reply."
+<span class="p">$</span> <span class="cursor" aria-hidden="true"></span></pre>
+            <div class="tmux" aria-hidden="true">
+              <span>[asn-d17a4e] 0:claude*</span>
+              <span>"local" 15:18 09-Aug-26</span>
+            </div>
+          </div>
+          <p>
+            The coordinator picks up the request, starts agent A (Claude Code)
+            locally and agent B (Codex) on the mac mini, and briefs them
+            through <code>asn</code>.
+          </p>
+          <p>
+            Below, <code>agent-session-web</code> shows all sessions in one
+            browser. In agent A's conversation you can see:
+          </p>
+          <ul>
+            <li>the briefing from the coordinator arriving through <code>asn</code></li>
+            <li>agent A messaging agent B with <code>asn send</code>, addressed by its session key</li>
+            <li>agent B's reply, sent with <code>asn</code> from the remote machine</li>
+          </ul>
+        </div>
+        <figure class="shot">
+          <a
+            href="../docs/assets/agent-session-web-annotated.png"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              src="../docs/assets/agent-session-web-annotated.png"
+              alt="agent-session-web showing the dispatch session, a local Claude Code session, and a remote Codex session exchanging messages through asn"
+            />
+          </a>
+          <figcaption>agent-session-web · all managed sessions in one browser</figcaption>
+        </figure>
+      </section>
+
+      <section>
+        <div class="prose">
+          <h2>Principles</h2>
+          <div class="principles">
+            <p>
+              <strong>Two doors.</strong> Every session is reachable through the
+              generic <code>asn</code> CLI and through the agent's native
+              terminal UI. Both lead to the same running conversation.
+            </p>
+            <p>
+              <strong>Single abstraction.</strong> Coordinators and
+              sub-coordinators are ordinary agent sessions given that role.
+              There is no hidden orchestration engine.
+            </p>
+            <p>
+              <strong>Transparent placement.</strong> Sessions run locally,
+              remotely over SSH, or in containers, and are addressed the same
+              way wherever they run.
+            </p>
+            <p>
+              <strong>Human oversight.</strong> People can observe, guide, or
+              take over any participant's session at any time.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="projects">
+        <div class="prose">
+          <h2>Projects</h2>
+          <div class="dir">
+            <a href="https://github.com/krasserm/agent-exchange/tree/main/agent-session">
+              <span class="name">agent-session/<span class="core">core</span></span>
+              <span class="desc">
+                The <code>asn</code> CLI for managing agent sessions, backed by
+                persistent, distributed messaging infrastructure.
+              </span>
+            </a>
+            <a href="https://github.com/krasserm/agent-exchange/tree/main/agent-session-web">
+              <span class="name">agent-session-web/</span>
+              <span class="desc">
+                A browser-based interface for viewing and interacting with all
+                managed agent sessions.
+              </span>
+            </a>
+            <a href="https://github.com/krasserm/agent-exchange/tree/main/agent-session-top">
+              <span class="name">agent-session-top/</span>
+              <span class="desc">
+                A terminal dashboard for monitoring agent sessions and opening
+                any session for direct interaction.
+              </span>
+            </a>
+            <a href="https://github.com/krasserm/agent-exchange/tree/main/agent-dispatch">
+              <span class="name">agent-dispatch/</span>
+              <span class="desc">
+                A long-lived, intelligent front door that delegates work to
+                project sessions or, for team requests, a coordinator.
+              </span>
+            </a>
+            <a href="https://github.com/krasserm/agent-exchange/tree/main/agent-docker">
+              <span class="name">agent-docker/</span>
+              <span class="desc">
+                A ready-to-use, non-root Docker environment for running agent
+                sessions in local or remote containers.
+              </span>
+            </a>
+          </div>
+          <p class="dir-note">
+            <code>agent-session</code> is the core. The other projects add user
+            interfaces, dispatch behavior, or an execution environment without
+            introducing a different kind of agent session.
+          </p>
+        </div>
+      </section>
+
+    </main>
+    <script>
+      document.querySelectorAll(".term .copy").forEach((button) => {
+        button.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(button.dataset.cmd);
+          button.classList.add("done");
+          setTimeout(() => button.classList.remove("done"), 1200);
+        });
+      });
+    </script>
+  </body>
+</html>
