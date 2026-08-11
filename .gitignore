@@ -11,3 +11,6 @@ __pycache__/
 .pytest_cache/
 
 sandbox.md
+
+# Copied into place by the site deploy workflow
+site/assets/
