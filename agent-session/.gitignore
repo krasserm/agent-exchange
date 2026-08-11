@@ -1,0 +1,8 @@
+.ruff_cache/
+.mypy_cache/
+.claude/worktrees/
+.claude.events.jsonl
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+/sandbox.*
+/sessions

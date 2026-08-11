@@ -1,0 +1,5 @@
+{
+  "name": "agent-exchange",
+  "version": "0.1.0",
+  "description": "Manage coding-agent sessions (Claude Code, codex, ...) programmatically via asn and tmux"
+}

@@ -1,0 +1,34 @@
+[project]
+name = "agent-session"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "libtmux>=0.55.0",
+    "pydantic>=2.12.5",
+    "watchfiles>=1.1.1",
+]
+
+[project.scripts]
+asn = "agent_session.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_session"]
+
+[dependency-groups]
+test = [
+    "pytest>=8.0",
+    "pytest-asyncio>=1.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# libtmux's bundled pytest plugin applies marks to fixtures, a hard error since
+# pytest 9. Its fixtures are unused here (tests build their own Server).
+addopts = "-p no:libtmux"
+markers = [
+    "e2e: end-to-end tests requiring real agent sessions (claude, codex)",
+]

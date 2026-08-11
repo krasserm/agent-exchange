@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+
+# Python
+__pycache__/
+.venv/
+.env
+.pytest_cache/
+
+sandbox.md

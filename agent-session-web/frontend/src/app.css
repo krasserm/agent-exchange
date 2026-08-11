@@ -1,0 +1,139 @@
+:root {
+  color-scheme: dark;
+
+  /* Mission-control HUD palette */
+  --bg: #070b12;
+  --bg-deep: #050810;
+  --panel: #0b1320;
+  --panel-2: #0f1a2b;
+  --panel-hi: #13213a;
+  --line: #1d2a3a;
+  --line-soft: #16202e;
+
+  --text: #c9d6e5;
+  --muted: #6b7d93;
+  --faint: #44566b;
+
+  --accent: #22d3ee;
+  --accent-dim: #0e7c8c;
+  --accent-deep: #083c46;
+  --accent-glow: rgba(34, 211, 238, 0.55);
+  --accent-wash: rgba(34, 211, 238, 0.08);
+
+  --ok: #34d399;
+  --warn: #f59e0b;
+  --danger: #fb5d5d;
+  --slate: #475569;
+
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Monaco,
+    "Courier New", monospace;
+  --font-display: "Chakra Petch", var(--font-mono);
+
+  --hud-track: 0.14em;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Atmospheric shell: grid lines + radial glow + scanlines.
+   Fixed, non-interactive, sits behind the app. Never over the xterm canvas. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      1200px 700px at 78% -10%,
+      rgba(34, 211, 238, 0.07),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 600px at -10% 110%,
+      rgba(34, 211, 238, 0.05),
+      transparent 55%
+    ),
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    44px 44px,
+    44px 44px;
+  background-position:
+    0 0,
+    0 0,
+    -1px -1px,
+    -1px -1px;
+  opacity: 0.6;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.18) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+}
+
+/* HUD section header shared idiom */
+.hud-head {
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--hud-track);
+  color: var(--muted);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1c2a3c;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-dim);
+  background-clip: content-box;
+}
+
+::selection {
+  background: var(--accent-glow);
+  color: #04222a;
+}

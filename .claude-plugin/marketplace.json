@@ -1,0 +1,16 @@
+{
+  "name": "agent-exchange",
+  "description": "Agent-exchange marketplace",
+  "owner": {
+    "name": "Martin Krasser"
+  },
+  "plugins": [
+    {
+      "name": "agent-exchange",
+      "description": "Manage and coordinate coding-agent sessions (Claude Code, codex, ...) programmatically via asn and tmux",
+      "source": "./plugin",
+      "category": "Development",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_USE" }
+    }
+  ]
+}

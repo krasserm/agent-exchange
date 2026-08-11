@@ -1,0 +1,133 @@
+#!/bin/bash
+# Message-plane shim for non-local-native sessions (docs/architecture.md).
+#
+# Carries only bash + jq -- no daemon, no Unix socket, no Python. Two on-ramps
+# to the control-host daemon:
+#
+#   asn send <to> <text>            append-only outbox ride (up-mirror / bind mount)
+#   asn messages <key> [--last N]   read a peer's assistant messages
+#   asn status <key>                read a peer's status
+#   asn capture <key> [--lines N]   read a peer's TUI text
+#
+# Sends append a {ts,from,to,message} line to this session's outbox.jsonl, which
+# the daemon tails and dispatches. Reads open a single TCP code path to the
+# daemon's read-only, token-gated endpoint (address injected per transport via
+# $ASN_READ_ADDR / $ASN_READ_TOKEN at launch).
+
+set -u
+
+usage() {
+  echo "usage: asn {send <to> <text>|messages <key> [--last N]|status <key>|capture <key> [--lines N]}" >&2
+  exit 2
+}
+
+# --- send: append to the outbox (fire-and-forget) ---------------------------
+
+outbox_send() {
+  local to="$1"; shift
+  local text="$*"
+  : "${AGENT_SESSION_KEY:?AGENT_SESSION_KEY not set}"
+  local dir="${ASN_HOME:-$HOME/.agent-session}/sessions/$AGENT_SESSION_KEY"
+  mkdir -p "$dir"
+  local line
+  line=$(jq -nc \
+    --arg ts "$(date +%Y-%m-%dT%H:%M:%S)" \
+    --arg from "$AGENT_SESSION_KEY" \
+    --arg to "$to" \
+    --arg msg "$text" \
+    '{ts:$ts, from:$from, to:$to, message:$msg}') || return 1
+  # Build the full line in a temp file, then append it in one write so a reader
+  # (daemon tail / Mutagen mirror) never observes a half-formed line. The
+  # offset-safe reader consumes only through the last newline regardless.
+  local tmp
+  tmp=$(mktemp "$dir/.outbox.XXXXXX") || return 1
+  printf '%s\n' "$line" >"$tmp"
+  cat "$tmp" >>"$dir/outbox.jsonl"
+  rm -f "$tmp"
+}
+
+# --- reads: one TCP exchange against the daemon read endpoint ----------------
+
+read_rpc() {
+  # $1 method, $2 params (compact JSON). Emits the raw {ok,result} line.
+  local method="$1" params="$2"
+  : "${ASN_READ_ADDR:?ASN_READ_ADDR not set}"
+  : "${ASN_READ_TOKEN:?ASN_READ_TOKEN not set}"
+  local host="${ASN_READ_ADDR%:*}" port="${ASN_READ_ADDR##*:}"
+  local req
+  req=$(jq -nc \
+    --arg t "$ASN_READ_TOKEN" \
+    --arg m "$method" \
+    --argjson p "$params" \
+    '{token:$t, method:$m, params:$p}') || return 1
+  local to="${ASN_READ_TIMEOUT:-5}"
+  # Bound the whole exchange: a /dev/tcp connect to a dead endpoint can hang.
+  # Prefer `timeout` when present (Linux/coreutils); otherwise rely on the
+  # inner `read -t` to bound the response wait (connects are to a loopback /
+  # host-gateway forward, so they resolve fast).
+  local runner
+  if command -v timeout >/dev/null 2>&1; then
+    runner=(timeout "$to" bash -c)
+  else
+    runner=(bash -c)
+  fi
+  ASN_REQ="$req" ASN_HOST="$host" ASN_PORT="$port" ASN_T="$to" "${runner[@]}" '
+    exec 3<>"/dev/tcp/$ASN_HOST/$ASN_PORT" || exit 7
+    printf "%s\n" "$ASN_REQ" >&3
+    IFS= read -r -t "$ASN_T" line <&3
+    printf "%s\n" "$line"
+  '
+}
+
+emit() {
+  # Reads an {ok,result} line on stdin and prints `result` via the jq $1 filter.
+  local filter="$1" resp
+  resp=$(cat)
+  if [ -z "$resp" ]; then
+    echo "asn: no response from ${ASN_READ_ADDR:-?}" >&2
+    return 1
+  fi
+  if [ "$(printf '%s' "$resp" | jq -r '.ok')" != "true" ]; then
+    printf '%s' "$resp" | jq -r '.error // "request failed"' >&2
+    return 1
+  fi
+  printf '%s' "$resp" | jq -r "$filter"
+}
+
+# --- dispatch ---------------------------------------------------------------
+
+cmd="${1:-}"
+[ -n "$cmd" ] && shift || usage
+
+case "$cmd" in
+  send)
+    [ "$#" -ge 2 ] || usage
+    to="$1"; shift
+    outbox_send "$to" "$@"
+    ;;
+  messages)
+    [ "$#" -ge 1 ] || usage
+    key="$1"; shift
+    last=1
+    [ "${1:-}" = "--last" ] && { last="$2"; shift 2; }
+    params=$(jq -nc --arg k "$key" --argjson n "$last" '{key:$k, last:$n}')
+    read_rpc messages "$params" | emit '.result.messages[].message'
+    ;;
+  status)
+    [ "$#" -ge 1 ] || usage
+    key="$1"
+    params=$(jq -nc --arg k "$key" '{key:$k}')
+    read_rpc status "$params" | emit '.result.status'
+    ;;
+  capture)
+    [ "$#" -ge 1 ] || usage
+    key="$1"; shift
+    lines=50
+    [ "${1:-}" = "--lines" ] && { lines="$2"; shift 2; }
+    params=$(jq -nc --arg k "$key" --argjson n "$lines" '{key:$k, lines:$n}')
+    read_rpc capture "$params" | emit '.result.content'
+    ;;
+  *)
+    usage
+    ;;
+esac

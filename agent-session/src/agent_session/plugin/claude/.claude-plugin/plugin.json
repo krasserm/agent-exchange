@@ -1,0 +1,6 @@
+{
+  "name": "agent-session",
+  "version": "0.1.0",
+  "description": "Event logging for Claude Code sessions managed by agent-session",
+  "hooks": "./hooks/hooks.json"
+}
